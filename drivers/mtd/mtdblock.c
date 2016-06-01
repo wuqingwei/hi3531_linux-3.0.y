@@ -110,6 +110,45 @@ static int erase_write (struct mtd_info *mtd, unsigned long pos,
 	return 0;
 }
 
+#if 1
+// based on erase_write
+int hisi_nand_erase (struct mtd_info *mtd, unsigned long pos,int len)
+{
+	struct erase_info erase;
+	DECLARE_WAITQUEUE(wait, current);
+	wait_queue_head_t wait_q;
+	size_t retlen;
+	int ret;
+
+
+	init_waitqueue_head(&wait_q);
+	erase.mtd = mtd;
+	erase.callback = erase_callback;
+	erase.addr = pos;
+	erase.len = len;
+	erase.priv = (u_long)&wait_q;
+
+	set_current_state(TASK_INTERRUPTIBLE);
+	add_wait_queue(&wait_q, &wait);
+
+
+	ret = mtd->erase(mtd, &erase);
+	if (ret) {
+		set_current_state(TASK_RUNNING);
+		remove_wait_queue(&wait_q, &wait);
+		printk (KERN_WARNING "mtdblock: erase of region [0x%lx, 0x%x] "
+				     "on \"%s\" failed\n",
+			pos, len, mtd->name);
+		return ret;
+	}
+
+	schedule();  /* Wait for erase to finish. */
+	remove_wait_queue(&wait_q, &wait);
+
+	return 0;
+	
+}
+#endif
 
 static int write_cached_data (struct mtdblk_dev *mtdblk)
 {

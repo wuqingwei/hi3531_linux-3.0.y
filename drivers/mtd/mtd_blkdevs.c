@@ -37,6 +37,8 @@
 
 #include "mtdcore.h"
 
+extern int hisi_nand_erase(struct mtd_info *mtd, unsigned long pos,int len);
+
 static LIST_HEAD(blktrans_majors);
 static DEFINE_MUTEX(blktrans_ref_mutex);
 
@@ -301,7 +303,9 @@ static int blktrans_ioctl(struct block_device *bdev, fmode_t mode,
 {
 	struct mtd_blktrans_dev *dev = blktrans_dev_get(bdev->bd_disk);
 	int ret = -ENXIO;
-
+	unsigned long	eraseAddr = 0;
+	copy_from_user(&eraseAddr,(unsigned long *)arg,sizeof(unsigned long));		
+	struct mtd_info *mtd = dev->mtd;
 	if (!dev)
 		return ret;
 
@@ -313,6 +317,14 @@ static int blktrans_ioctl(struct block_device *bdev, fmode_t mode,
 	switch (cmd) {
 	case BLKFLSBUF:
 		ret = dev->tr->flush ? dev->tr->flush(dev) : 0;
+		break;
+	case GETBADBLOCKFLAG:
+		//printk("GETBADBLOCKFLAG\n");
+		ret = mtd->block_isbad(mtd, eraseAddr); 	
+		break;
+	case HISI_NAND_ERASE:
+		//printk("HISI_NAND_ERASE\n");
+		hisi_nand_erase(mtd, eraseAddr,0x20000);
 		break;
 	default:
 		ret = -ENOTTY;

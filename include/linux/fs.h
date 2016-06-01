@@ -292,6 +292,11 @@ struct inodes_stat_t {
 #define BLKSECTSET _IO(0x12,102)/* set max sectors per request (ll_rw_blk.c) */
 #define BLKSECTGET _IO(0x12,103)/* get max sectors per request (ll_rw_blk.c) */
 #define BLKSSZGET  _IO(0x12,104)/* get block device sector size */
+
+/* added by wqw 20160321 */
+#define GETBADBLOCKFLAG  	0x80  		/* get bad block flag */
+#define HISI_NAND_ERASE  	0x81  		/* NAND ERASE */
+
 #if 0
 #define BLKPG      _IO(0x12,105)/* See blkpg.h */
 
