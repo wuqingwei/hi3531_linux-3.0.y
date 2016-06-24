@@ -294,8 +294,9 @@ struct inodes_stat_t {
 #define BLKSSZGET  _IO(0x12,104)/* get block device sector size */
 
 /* added by wqw 20160321 */
-#define GETBADBLOCKFLAG  	0x80  		/* get bad block flag */
-#define HISI_NAND_ERASE  	0x81  		/* NAND ERASE */
+#define GETBADBLOCKFLAG  			0x80  		/* get bad block flag */
+#define HISI_NAND_ERASE  			0x81  		/* NAND ERASE */
+#define HI35XX_YAFFS_WRITE_IMAGE	0x82		/* WRITE IMAGE */
 
 #if 0
 #define BLKPG      _IO(0x12,105)/* See blkpg.h */

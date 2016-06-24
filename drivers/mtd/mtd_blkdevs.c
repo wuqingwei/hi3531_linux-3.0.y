@@ -36,6 +36,18 @@
 #include <asm/uaccess.h>
 
 #include "mtdcore.h"
+//
+typedef struct mtd_oob_offset_ops {
+	unsigned int     	mode;
+	unsigned int		len;
+	unsigned int		retlen;
+	unsigned int		ooblen;
+	unsigned int		oobretlen;
+	unsigned int	    ooboffs;
+	unsigned char		*datbuf;
+	unsigned char		*oobbuf;
+    long long           offset;
+} mtd_oob_offset_ops_t;
 
 extern int hisi_nand_erase(struct mtd_info *mtd, unsigned long pos,int len);
 
@@ -302,10 +314,18 @@ static int blktrans_ioctl(struct block_device *bdev, fmode_t mode,
 			      unsigned int cmd, unsigned long arg)
 {
 	struct mtd_blktrans_dev *dev = blktrans_dev_get(bdev->bd_disk);
-	int ret = -ENXIO;
-	unsigned long	eraseAddr = 0;
-	copy_from_user(&eraseAddr,(unsigned long *)arg,sizeof(unsigned long));		
+	int ret = -ENXIO;			
 	struct mtd_info *mtd = dev->mtd;
+	
+	unsigned long	eraseAddr = 0;
+	loff_t offs;
+	mtd_oob_offset_ops_t appOps;
+	struct mtd_oob_ops ops;	
+	unsigned char databuf[4096] = {0};
+	unsigned char oobbuf[256] = {0};
+	ops.datbuf = databuf;
+	ops.oobbuf = oobbuf;	
+	
 	if (!dev)
 		return ret;
 
@@ -319,12 +339,31 @@ static int blktrans_ioctl(struct block_device *bdev, fmode_t mode,
 		ret = dev->tr->flush ? dev->tr->flush(dev) : 0;
 		break;
 	case GETBADBLOCKFLAG:
+		copy_from_user(&eraseAddr,(unsigned long *)arg,sizeof(unsigned long));
+		offs = (loff_t)eraseAddr;
 		//printk("GETBADBLOCKFLAG\n");
-		ret = mtd->block_isbad(mtd, eraseAddr); 	
+		ret = mtd->block_isbad(mtd, offs); 	
 		break;
 	case HISI_NAND_ERASE:
 		//printk("HISI_NAND_ERASE\n");
-		hisi_nand_erase(mtd, eraseAddr,0x20000);
+		copy_from_user(&eraseAddr,(unsigned long *)arg,sizeof(unsigned long));
+		ret = hisi_nand_erase(mtd, eraseAddr,0x20000);
+		break;
+	case HI35XX_YAFFS_WRITE_IMAGE:
+		//printk("HI35XX_YAFFS_WRITE_IMAGE 1\n");
+		copy_from_user(&appOps,(unsigned long *)arg, sizeof(appOps));	
+		//copy_from_user(&ops,(unsigned long *)arg, sizeof(ops));
+		ops.mode = appOps.mode;
+		ops.len = appOps.len;
+		ops.retlen = appOps.retlen;
+		ops.ooblen = appOps.ooblen;
+		ops.oobretlen = appOps.oobretlen;
+		ops.ooboffs = appOps.ooboffs;
+		//ops.datbuf = appOps.datbuf;
+		//ops.oobbuf = appOps.oobbuf;
+        copy_from_user(ops.datbuf,appOps.datbuf,appOps.len);
+        copy_from_user(ops.oobbuf,appOps.oobbuf,appOps.ooblen);		
+		ret = mtd->write_oob(mtd,appOps.offset,&ops);
 		break;
 	default:
 		ret = -ENOTTY;
